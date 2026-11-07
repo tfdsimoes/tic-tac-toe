@@ -12,6 +12,5 @@ final class UiTheme {
     static final Color TEXT = new Color(239, 244, 250);
     static final Color MUTED = new Color(157, 172, 194);
 
-    private UiTheme() {
-    }
+    private UiTheme() {}
 }

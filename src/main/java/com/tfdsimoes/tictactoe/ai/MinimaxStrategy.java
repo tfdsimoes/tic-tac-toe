@@ -3,7 +3,6 @@ package com.tfdsimoes.tictactoe.ai;
 import com.tfdsimoes.tictactoe.domain.GameBoard;
 import com.tfdsimoes.tictactoe.domain.GameStatus;
 import com.tfdsimoes.tictactoe.domain.Mark;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

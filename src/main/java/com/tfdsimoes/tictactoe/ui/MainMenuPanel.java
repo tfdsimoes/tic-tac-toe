@@ -1,18 +1,19 @@
 package com.tfdsimoes.tictactoe.ui;
 
 import com.tfdsimoes.tictactoe.game.GameMode;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.util.function.Consumer;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 final class MainMenuPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
+
     MainMenuPanel(Consumer<GameMode> onModeSelected) {
         setBackground(UiTheme.BACKGROUND);
         setLayout(new BorderLayout());

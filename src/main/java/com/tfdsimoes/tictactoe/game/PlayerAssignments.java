@@ -1,7 +1,6 @@
 package com.tfdsimoes.tictactoe.game;
 
 import com.tfdsimoes.tictactoe.domain.Mark;
-
 import java.util.Objects;
 
 public final class PlayerAssignments {
@@ -26,8 +25,6 @@ public final class PlayerAssignments {
     }
 
     public PlayerId playerFor(Mark mark) {
-        return Objects.requireNonNull(mark, "mark") == firstPlayerMark
-                ? PlayerId.FIRST
-                : PlayerId.SECOND;
+        return Objects.requireNonNull(mark, "mark") == firstPlayerMark ? PlayerId.FIRST : PlayerId.SECOND;
     }
 }
