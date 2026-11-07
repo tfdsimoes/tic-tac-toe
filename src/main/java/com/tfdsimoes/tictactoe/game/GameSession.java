@@ -65,8 +65,14 @@ public final class GameSession {
     }
 
     public void stop() {
+        if (!active) {
+            return;
+        }
         active = false;
         cancelPendingTask();
+        if (board.getStatus().isFinished()) {
+            assignmentsChanged.accept(playerAssignments.nextRound());
+        }
     }
 
     public GameBoard getBoard() {
