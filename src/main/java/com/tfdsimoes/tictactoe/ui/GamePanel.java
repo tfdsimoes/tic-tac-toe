@@ -67,7 +67,7 @@ final class GamePanel extends JPanel {
 
                     @Override
                     public void onError(String message) {
-                        statusLabel.setText(message);
+                        setStatus(message);
                     }
                 });
 
@@ -104,6 +104,9 @@ final class GamePanel extends JPanel {
         styleScoreLabel(firstPlayerScoreLabel, UiTheme.X_MARK);
         styleScoreLabel(secondPlayerScoreLabel, UiTheme.O_MARK);
         styleScoreLabel(drawScoreLabel, UiTheme.TEXT);
+        firstPlayerScoreLabel.getAccessibleContext().setAccessibleName(mode.getPlayerName(PlayerId.FIRST) + " score");
+        secondPlayerScoreLabel.getAccessibleContext().setAccessibleName(mode.getPlayerName(PlayerId.SECOND) + " score");
+        drawScoreLabel.getAccessibleContext().setAccessibleName("Draw count");
         scores.add(firstPlayerScoreLabel);
         scores.add(secondPlayerScoreLabel);
         scores.add(drawScoreLabel);
@@ -137,6 +140,7 @@ final class GamePanel extends JPanel {
         footer.setOpaque(false);
         statusLabel.setForeground(UiTheme.MUTED);
         statusLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+        statusLabel.getAccessibleContext().setAccessibleName("Game status");
         footer.add(statusLabel, BorderLayout.CENTER);
         return footer;
     }
@@ -169,10 +173,10 @@ final class GamePanel extends JPanel {
         }
         PlayerId currentPlayer = playerForMark(board.getNextMark());
         if (!mode.isHumanTurn(currentPlayer)) {
-            statusLabel.setText(mode.getPlayerName(currentPlayer) + " playing " + board.getNextMark() + "...");
+            setStatus(mode.getPlayerName(currentPlayer) + " playing " + board.getNextMark() + "...");
             return;
         }
-        statusLabel.setText(board.getNextMark() + " to move - " + mode.getPlayerName(currentPlayer));
+        setStatus(board.getNextMark() + " to move - " + mode.getPlayerName(currentPlayer));
     }
 
     private void showRoundResult(GameStatus result) {
@@ -180,18 +184,32 @@ final class GamePanel extends JPanel {
         String message = result.winner()
                 .map(mark -> mark + " wins! (" + mode.getPlayerName(playerForMark(mark)) + ")")
                 .orElse("It's a draw!");
-        statusLabel.setText(message + " - Next round in 3 seconds");
+        setStatus(message + " - Next round in 3 seconds");
         renderBoard();
     }
 
     private void updateScoreLabels() {
         firstPlayerScoreLabel.setText(scoreLabel(PlayerId.FIRST));
         secondPlayerScoreLabel.setText(scoreLabel(PlayerId.SECOND));
-        firstPlayerScoreLabel.setForeground(
-                markColor(session.getPlayerAssignments().markFor(PlayerId.FIRST)));
-        secondPlayerScoreLabel.setForeground(
-                markColor(session.getPlayerAssignments().markFor(PlayerId.SECOND)));
+        Mark firstMark = session.getPlayerAssignments().markFor(PlayerId.FIRST);
+        Mark secondMark = session.getPlayerAssignments().markFor(PlayerId.SECOND);
+        firstPlayerScoreLabel.setForeground(markColor(firstMark));
+        secondPlayerScoreLabel.setForeground(markColor(secondMark));
+        firstPlayerScoreLabel
+                .getAccessibleContext()
+                .setAccessibleDescription(mode.getPlayerName(PlayerId.FIRST) + ", " + firstMark + ", "
+                        + scoreboard.getWins(mode, PlayerId.FIRST) + " wins");
+        secondPlayerScoreLabel
+                .getAccessibleContext()
+                .setAccessibleDescription(mode.getPlayerName(PlayerId.SECOND) + ", " + secondMark + ", "
+                        + scoreboard.getWins(mode, PlayerId.SECOND) + " wins");
         drawScoreLabel.setText("<html><b>Draws</b><br>" + scoreboard.getDraws(mode) + "</html>");
+        drawScoreLabel.getAccessibleContext().setAccessibleDescription(scoreboard.getDraws(mode) + " draws");
+    }
+
+    private void setStatus(String message) {
+        statusLabel.setText(message);
+        statusLabel.getAccessibleContext().setAccessibleDescription(message);
     }
 
     private String scoreLabel(PlayerId player) {

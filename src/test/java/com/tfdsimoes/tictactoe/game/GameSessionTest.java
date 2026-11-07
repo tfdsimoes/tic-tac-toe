@@ -3,6 +3,7 @@ package com.tfdsimoes.tictactoe.game;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tfdsimoes.tictactoe.ai.MinimaxStrategy;
@@ -132,10 +133,57 @@ class GameSessionTest {
         assertFalse(scheduler.hasPendingTask());
         session.playHumanMove(0);
 
+        session.playHumanMove(1);
+        assertNull(session.getBoard().getCell(1));
         assertEquals(GameSession.COMPUTER_MOVE_DELAY_MS, scheduler.nextDelayMillis());
         scheduler.runNext();
         assertEquals(
                 2L,
+                session.getBoard().getCells().stream()
+                        .filter(mark -> mark != null)
+                        .count());
+    }
+
+    @Test
+    void delaysTheComputerOpeningMoveWhenItReceivesXInTheNextRound() {
+        Scoreboard scoreboard = new Scoreboard();
+        ManualGameScheduler scheduler = new ManualGameScheduler();
+        PlayerAssignments[] assignments = {PlayerAssignments.initial()};
+        int[] strategyMoves = {3, 4, 0};
+        int[] strategyMoveIndex = {0};
+        GameSession session = newSession(
+                GameMode.PLAYER_VS_COMPUTER,
+                scoreboard,
+                assignments[0],
+                scheduler,
+                updated -> assignments[0] = updated,
+                new ArrayList<>(),
+                board -> strategyMoves[strategyMoveIndex[0]++]);
+        session.start();
+
+        playMoves(session, 0);
+        assertEquals(GameSession.COMPUTER_MOVE_DELAY_MS, scheduler.nextDelayMillis());
+        scheduler.runNext();
+        playMoves(session, 1);
+        scheduler.runNext();
+        playMoves(session, 2);
+
+        assertEquals(GameStatus.X_WON, session.getBoard().getStatus());
+        assertEquals(1, scoreboard.getWins(GameMode.PLAYER_VS_COMPUTER, PlayerId.FIRST));
+        assertEquals(GameSession.ROUND_RESTART_DELAY_MS, scheduler.nextDelayMillis());
+        scheduler.runNext();
+
+        assertEquals(Mark.X, session.getBoard().getNextMark());
+        assertEquals(PlayerId.SECOND, session.getPlayerAssignments().playerFor(Mark.X));
+        assertEquals(GameSession.COMPUTER_MOVE_DELAY_MS, scheduler.nextDelayMillis());
+        session.playHumanMove(5);
+        assertNull(session.getBoard().getCell(5));
+
+        scheduler.runNext();
+
+        assertEquals(Mark.X, session.getBoard().getCell(0));
+        assertEquals(
+                1L,
                 session.getBoard().getCells().stream()
                         .filter(mark -> mark != null)
                         .count());
@@ -172,6 +220,41 @@ class GameSessionTest {
         assertEquals(9, session.getBoard().getLegalMoves().size());
         assertEquals(1, errors.size());
         assertTrue(errors.get(0).contains("legal move"));
+        assertFalse(scheduler.hasPendingTask());
+    }
+
+    @Test
+    void reportsExpectedStrategyExceptionsWithoutCorruptingTheBoard() {
+        ManualGameScheduler scheduler = new ManualGameScheduler();
+        List<String> errors = new ArrayList<>();
+        GameSession session = new GameSession(
+                GameMode.COMPUTER_VS_COMPUTER,
+                new Scoreboard(),
+                board -> {
+                    throw new IllegalArgumentException("Strategy rejected the board.");
+                },
+                PlayerAssignments.initial(),
+                scheduler,
+                ignored -> {},
+                new GameSession.Listener() {
+                    @Override
+                    public void onStateChanged() {}
+
+                    @Override
+                    public void onRoundFinished(GameStatus result) {}
+
+                    @Override
+                    public void onError(String message) {
+                        errors.add(message);
+                    }
+                });
+        session.start();
+
+        scheduler.runNext();
+
+        assertEquals(9, session.getBoard().getLegalMoves().size());
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).contains("could not choose a legal move"));
         assertFalse(scheduler.hasPendingTask());
     }
 
@@ -237,6 +320,31 @@ class GameSessionTest {
 
         assertFalse(scheduler.hasPendingTask());
         assertEquals(GameStatus.X_WON, session.getBoard().getStatus());
+        assertNull(session.getBoard().getCell(5));
+        session.playHumanMove(5);
+        assertNull(session.getBoard().getCell(5));
+    }
+
+    @Test
+    void stoppingIsIdempotentAndStoppedSessionsCannotRestartOrAcceptMoves() {
+        ManualGameScheduler scheduler = new ManualGameScheduler();
+        GameSession session = newSession(
+                GameMode.PLAYER_VS_PLAYER,
+                new Scoreboard(),
+                PlayerAssignments.initial(),
+                scheduler,
+                ignored -> {},
+                new ArrayList<>(),
+                board -> 0);
+        session.start();
+        session.stop();
+
+        session.stop();
+        session.playHumanMove(0);
+
+        assertFalse(session.isActive());
+        assertNull(session.getBoard().getCell(0));
+        assertThrows(IllegalStateException.class, session::start);
     }
 
     private GameSession newSession(
