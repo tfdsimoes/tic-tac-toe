@@ -60,7 +60,7 @@ Use **Main menu** to choose another mode without losing that mode's scores or ma
 
 ## Controls and accessibility
 
-Use the mouse or keyboard focus navigation to activate the game-mode and board buttons. Board buttons have accessible names describing their row and column, and their accessible descriptions update to identify empty and played cells.
+Use the mouse or keyboard. Press **Tab** or **Shift+Tab** to move focus and **Space** to activate a focused game-mode or board button. Board buttons have accessible names describing their row and column, and their accessible descriptions update to identify empty and played cells. Turn, result, and score labels also expose accessible names and descriptions; screen-reader announcement behavior can vary by platform.
 
 ## Troubleshooting
 
@@ -76,15 +76,19 @@ Use the mouse or keyboard focus navigation to activate the game-mode and board b
 - `ai`: computer move strategy.
 - `ui`: Swing screens and rendering.
 
-Game rules and computer decisions are tested independently of the graphical interface:
+Game rules, computer decisions, session timing, scheduler behavior, and Swing panel interactions are tested:
 
 ```shell
 sh ./mvnw test
 ```
 
-`clean verify` also generates a JaCoCo test coverage report at `target/site/jacoco/index.html`; it is informational and does not enforce a percentage threshold.
+`clean verify` generates a JaCoCo report at `target/site/jacoco/index.html` and enforces at least 80% line coverage separately for the `domain` and `game` packages. UI rendering is excluded from that threshold because most of it is presentation code; UI interactions and accessibility properties have focused tests and a manual checklist.
 
 See [the manual GUI checklist](docs/manual-gui-checklist.md) for interactive verification steps.
+
+## Contributing
+
+Use Gitflow for changes: branch from `develop`, open a pull request back to `develop`, and keep unrelated fixes in separate branches. Run `.\mvnw.cmd --batch-mode --no-transfer-progress clean verify` on Windows or `sh ./mvnw --batch-mode --no-transfer-progress clean verify` on Linux/macOS before opening a pull request. The CI workflow checks Java 17 on Windows and Linux, Java 21 on Linux, and reviews dependency changes.
 
 ## License
 
