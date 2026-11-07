@@ -32,11 +32,11 @@ On Windows, use `mvnw.cmd` instead of `./mvnw`. The wrapper downloads the pinned
 ## How to play
 
 - **Player vs Player:** two people share the keyboard and take turns.
-- **Player vs Machine:** X is controlled by the person and O by the computer.
+- **Player vs Machine:** play against the computer; player and machine switch marks after each round.
 - **Machine vs Machine:** both sides are controlled by the computer.
 - The computer uses minimax, so it will not lose when playing optimally. It waits one second before each move.
-- After a win or draw, the result stays on screen for three seconds. The next round then starts automatically, with X and O alternating who moves first.
-- The scoreboard tracks X wins, O wins, and draws for the lifetime of the running application.
+- After a win or draw, the result stays on screen for three seconds. The next round then starts automatically with X moving first and the participants swapping marks; a player who had X moves second as O in the next round.
+- The scoreboard follows participant identities and is kept separately for each mode for the lifetime of the running application.
 
 Use **Main menu** to choose another mode without losing the session scoreboard.
 
