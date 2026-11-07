@@ -155,9 +155,8 @@ final class GamePanel extends JPanel {
             button.setEnabled(mark == null
                     && !board.getStatus().isFinished()
                     && mode.isHumanTurn(playerForMark(board.getNextMark())));
-            if (mark == null) {
-                button.getAccessibleContext().setAccessibleDescription("Empty game cell");
-            }
+            button.getAccessibleContext()
+                    .setAccessibleDescription(mark == null ? "Empty game cell" : mark + " game cell");
         }
     }
 
