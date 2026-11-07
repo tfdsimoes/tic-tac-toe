@@ -1,7 +1,5 @@
 package com.tfdsimoes.tictactoe.game;
 
-import com.tfdsimoes.tictactoe.domain.Mark;
-
 import java.util.Objects;
 
 public enum GameMode {

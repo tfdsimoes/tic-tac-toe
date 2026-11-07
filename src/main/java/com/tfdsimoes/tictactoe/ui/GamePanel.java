@@ -5,54 +5,71 @@ import com.tfdsimoes.tictactoe.domain.GameBoard;
 import com.tfdsimoes.tictactoe.domain.GameStatus;
 import com.tfdsimoes.tictactoe.domain.Mark;
 import com.tfdsimoes.tictactoe.game.GameMode;
+import com.tfdsimoes.tictactoe.game.GameScheduler;
+import com.tfdsimoes.tictactoe.game.GameSession;
 import com.tfdsimoes.tictactoe.game.PlayerAssignments;
 import com.tfdsimoes.tictactoe.game.PlayerId;
 import com.tfdsimoes.tictactoe.game.Scoreboard;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.Timer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 final class GamePanel extends JPanel {
-    private static final int COMPUTER_MOVE_DELAY_MS = 1_000;
-    private static final int ROUND_RESTART_DELAY_MS = 3_000;
+    private static final long serialVersionUID = 1L;
 
     private final GameMode mode;
     private final Scoreboard scoreboard;
-    private final MoveStrategy moveStrategy;
+    private final GameSession session;
     private final Runnable onMainMenu;
     private final List<JButton> cellButtons = new ArrayList<>(9);
     private final JLabel statusLabel = new JLabel("", JLabel.CENTER);
     private final JLabel firstPlayerScoreLabel = new JLabel("", JLabel.CENTER);
     private final JLabel secondPlayerScoreLabel = new JLabel("", JLabel.CENTER);
     private final JLabel drawScoreLabel = new JLabel("", JLabel.CENTER);
-    private final Timer computerMoveTimer;
-    private final Timer roundRestartTimer;
 
-    private GameBoard board;
-    private PlayerAssignments playerAssignments = PlayerAssignments.initial();
-
-    GamePanel(GameMode mode, Scoreboard scoreboard, MoveStrategy moveStrategy, Runnable onMainMenu) {
+    GamePanel(
+            GameMode mode,
+            Scoreboard scoreboard,
+            MoveStrategy moveStrategy,
+            PlayerAssignments playerAssignments,
+            Consumer<PlayerAssignments> assignmentsChanged,
+            GameScheduler scheduler,
+            Runnable onMainMenu) {
         this.mode = Objects.requireNonNull(mode, "mode");
         this.scoreboard = Objects.requireNonNull(scoreboard, "scoreboard");
-        this.moveStrategy = Objects.requireNonNull(moveStrategy, "moveStrategy");
         this.onMainMenu = Objects.requireNonNull(onMainMenu, "onMainMenu");
-        this.board = GameBoard.newGame(Mark.X);
+        this.session = new GameSession(
+                mode,
+                scoreboard,
+                Objects.requireNonNull(moveStrategy, "moveStrategy"),
+                Objects.requireNonNull(playerAssignments, "playerAssignments"),
+                Objects.requireNonNull(scheduler, "scheduler"),
+                Objects.requireNonNull(assignmentsChanged, "assignmentsChanged"),
+                new GameSession.Listener() {
+                    @Override
+                    public void onStateChanged() {
+                        updateView();
+                    }
 
-        computerMoveTimer = new Timer(COMPUTER_MOVE_DELAY_MS, this::playComputerMove);
-        computerMoveTimer.setRepeats(false);
-        roundRestartTimer = new Timer(ROUND_RESTART_DELAY_MS, event -> startNextRound());
-        roundRestartTimer.setRepeats(false);
+                    @Override
+                    public void onRoundFinished(GameStatus result) {
+                        showRoundResult(result);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        statusLabel.setText(message);
+                    }
+                });
 
         setBackground(UiTheme.BACKGROUND);
         setLayout(new BorderLayout(24, 24));
@@ -60,8 +77,7 @@ final class GamePanel extends JPanel {
         add(buildHeader(), BorderLayout.NORTH);
         add(buildBoard(), BorderLayout.CENTER);
         add(buildFooter(), BorderLayout.SOUTH);
-        renderBoard();
-        updateTurn();
+        session.start();
     }
 
     private JPanel buildHeader() {
@@ -73,8 +89,7 @@ final class GamePanel extends JPanel {
         backButton.setBackground(UiTheme.SURFACE);
         backButton.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
         backButton.addActionListener(event -> {
-            computerMoveTimer.stop();
-            roundRestartTimer.stop();
+            session.stop();
             onMainMenu.run();
         });
 
@@ -93,7 +108,6 @@ final class GamePanel extends JPanel {
         scores.add(secondPlayerScoreLabel);
         scores.add(drawScoreLabel);
         header.add(scores, BorderLayout.SOUTH);
-        updateScoreLabels();
         return header;
     }
 
@@ -128,34 +142,11 @@ final class GamePanel extends JPanel {
     }
 
     private void playHumanMove(int index) {
-        if (board.getStatus().isFinished() || !mode.isHumanTurn(playerForMark(board.getNextMark()))) {
-            return;
-        }
-        applyMove(index);
-    }
-
-    private void playComputerMove(ActionEvent event) {
-        if (board.getStatus().isFinished() || mode.isHumanTurn(playerForMark(board.getNextMark()))) {
-            return;
-        }
-        int move = moveStrategy.chooseMove(board);
-        applyMove(move);
-    }
-
-    private void applyMove(int index) {
-        Mark playedMark = board.getNextMark();
-        board = board.play(index);
-        JButton playedCell = cellButtons.get(index);
-        playedCell.getAccessibleContext().setAccessibleDescription(playedMark.name() + " selected");
-        renderBoard();
-        if (board.getStatus().isFinished()) {
-            finishRound();
-        } else {
-            updateTurn();
-        }
+        session.playHumanMove(index);
     }
 
     private void renderBoard() {
+        GameBoard board = session.getBoard();
         for (int index = 0; index < cellButtons.size(); index++) {
             JButton button = cellButtons.get(index);
             Mark mark = board.getCell(index);
@@ -164,66 +155,53 @@ final class GamePanel extends JPanel {
             button.setEnabled(mark == null
                     && !board.getStatus().isFinished()
                     && mode.isHumanTurn(playerForMark(board.getNextMark())));
-            if (mark == null) {
-                button.getAccessibleContext().setAccessibleDescription("Empty game cell");
-            }
+            button.getAccessibleContext()
+                    .setAccessibleDescription(mark == null ? "Empty game cell" : mark + " game cell");
         }
     }
 
-    private void updateTurn() {
-        PlayerId currentPlayer = playerForMark(board.getNextMark());
-        if (!mode.isHumanTurn(currentPlayer)) {
-            statusLabel.setText(mode.getPlayerName(currentPlayer)
-                    + " playing " + board.getNextMark() + "...");
-            renderBoard();
-            computerMoveTimer.restart();
+    private void updateView() {
+        updateScoreLabels();
+        renderBoard();
+        GameBoard board = session.getBoard();
+        if (board.getStatus().isFinished()) {
             return;
         }
-
+        PlayerId currentPlayer = playerForMark(board.getNextMark());
+        if (!mode.isHumanTurn(currentPlayer)) {
+            statusLabel.setText(mode.getPlayerName(currentPlayer) + " playing " + board.getNextMark() + "...");
+            return;
+        }
         statusLabel.setText(board.getNextMark() + " to move - " + mode.getPlayerName(currentPlayer));
-        renderBoard();
     }
 
-    private void finishRound() {
-        GameStatus result = board.getStatus();
-        if (result == GameStatus.DRAW) {
-            scoreboard.recordDraw(mode);
-        } else {
-            scoreboard.recordWin(mode, playerForMark(result.winner().orElseThrow()));
-        }
+    private void showRoundResult(GameStatus result) {
         updateScoreLabels();
         String message = result.winner()
                 .map(mark -> mark + " wins! (" + mode.getPlayerName(playerForMark(mark)) + ")")
                 .orElse("It's a draw!");
         statusLabel.setText(message + " - Next round in 3 seconds");
         renderBoard();
-        roundRestartTimer.restart();
-    }
-
-    private void startNextRound() {
-        playerAssignments = playerAssignments.nextRound();
-        board = GameBoard.newGame(Mark.X);
-        updateScoreLabels();
-        renderBoard();
-        updateTurn();
     }
 
     private void updateScoreLabels() {
         firstPlayerScoreLabel.setText(scoreLabel(PlayerId.FIRST));
         secondPlayerScoreLabel.setText(scoreLabel(PlayerId.SECOND));
-        firstPlayerScoreLabel.setForeground(markColor(playerAssignments.markFor(PlayerId.FIRST)));
-        secondPlayerScoreLabel.setForeground(markColor(playerAssignments.markFor(PlayerId.SECOND)));
+        firstPlayerScoreLabel.setForeground(
+                markColor(session.getPlayerAssignments().markFor(PlayerId.FIRST)));
+        secondPlayerScoreLabel.setForeground(
+                markColor(session.getPlayerAssignments().markFor(PlayerId.SECOND)));
         drawScoreLabel.setText("<html><b>Draws</b><br>" + scoreboard.getDraws(mode) + "</html>");
     }
 
     private String scoreLabel(PlayerId player) {
-        return "<html><b>" + playerAssignments.markFor(player) + " &nbsp;"
+        return "<html><b>" + session.getPlayerAssignments().markFor(player) + " &nbsp;"
                 + scoreboard.getWins(mode, player) + "</b><br><span style='color:#9dacc2'>"
                 + mode.getPlayerName(player) + "</span></html>";
     }
 
     private PlayerId playerForMark(Mark mark) {
-        return playerAssignments.playerFor(mark);
+        return session.getPlayerAssignments().playerFor(mark);
     }
 
     private static Color markColor(Mark mark) {
