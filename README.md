@@ -88,7 +88,7 @@ See [the manual GUI checklist](docs/manual-gui-checklist.md) for interactive ver
 
 ## Contributing
 
-Use Gitflow for changes: branch from `develop`, open a pull request back to `develop`, and keep unrelated fixes in separate branches. Run `.\mvnw.cmd --batch-mode --no-transfer-progress clean verify` on Windows or `sh ./mvnw --batch-mode --no-transfer-progress clean verify` on Linux/macOS before opening a pull request. The CI workflow checks Java 17 on Windows and Linux, Java 21 on Linux, and reviews dependency changes.
+Use Gitflow for changes: branch from `develop`, open a pull request back to `develop`, and keep unrelated fixes in separate branches. Run `.\mvnw.cmd --batch-mode --no-transfer-progress clean verify` on Windows or `sh ./mvnw --batch-mode --no-transfer-progress clean verify` on Linux/macOS before opening a pull request. The CI workflow checks Java 17 on Windows and Linux and Java 21 on Linux. Dependabot proposes monthly Maven and GitHub Actions updates. To run the optional dependency-review job, enable the repository dependency graph and set the `DEPENDENCY_REVIEW_ENABLED` repository variable to `true`; private repositories also require GitHub Advanced Security.
 
 ## License
 
