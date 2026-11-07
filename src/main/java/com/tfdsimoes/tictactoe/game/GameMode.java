@@ -2,9 +2,11 @@ package com.tfdsimoes.tictactoe.game;
 
 import com.tfdsimoes.tictactoe.domain.Mark;
 
+import java.util.Objects;
+
 public enum GameMode {
     PLAYER_VS_PLAYER("Player vs Player", "Two players share the keyboard and take turns"),
-    PLAYER_VS_COMPUTER("Player vs Machine", "Play as X against the computer as O"),
+    PLAYER_VS_COMPUTER("Player vs Machine", "Play against the computer; marks swap each round"),
     COMPUTER_VS_COMPUTER("Machine vs Machine", "Watch two computer-controlled players compete");
 
     private final String displayName;
@@ -23,19 +25,21 @@ public enum GameMode {
         return description;
     }
 
-    public boolean isHumanTurn(Mark mark) {
+    public boolean isHumanTurn(PlayerId player) {
+        Objects.requireNonNull(player, "player");
         return switch (this) {
             case PLAYER_VS_PLAYER -> true;
-            case PLAYER_VS_COMPUTER -> mark == Mark.X;
+            case PLAYER_VS_COMPUTER -> player == PlayerId.FIRST;
             case COMPUTER_VS_COMPUTER -> false;
         };
     }
 
-    public String getPlayerName(Mark mark) {
+    public String getPlayerName(PlayerId player) {
+        Objects.requireNonNull(player, "player");
         return switch (this) {
-            case PLAYER_VS_PLAYER -> mark == Mark.X ? "Player 1" : "Player 2";
-            case PLAYER_VS_COMPUTER -> mark == Mark.X ? "You" : "Machine";
-            case COMPUTER_VS_COMPUTER -> mark == Mark.X ? "Machine 1" : "Machine 2";
+            case PLAYER_VS_PLAYER -> player == PlayerId.FIRST ? "Player 1" : "Player 2";
+            case PLAYER_VS_COMPUTER -> player == PlayerId.FIRST ? "You" : "Machine";
+            case COMPUTER_VS_COMPUTER -> player == PlayerId.FIRST ? "Machine 1" : "Machine 2";
         };
     }
 }

@@ -1,29 +1,23 @@
 package com.tfdsimoes.tictactoe.game;
 
-import com.tfdsimoes.tictactoe.domain.GameStatus;
-import com.tfdsimoes.tictactoe.domain.Mark;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ScoreboardTest {
     @Test
-    void tracksWinsAndDrawsSeparately() {
+    void tracksWinsAndDrawsByParticipantAndMode() {
         Scoreboard scoreboard = new Scoreboard();
-        scoreboard.record(GameStatus.X_WON);
-        scoreboard.record(GameStatus.O_WON);
-        scoreboard.record(GameStatus.DRAW);
+        scoreboard.recordWin(GameMode.PLAYER_VS_PLAYER, PlayerId.FIRST);
+        scoreboard.recordWin(GameMode.PLAYER_VS_PLAYER, PlayerId.SECOND);
+        scoreboard.recordDraw(GameMode.PLAYER_VS_PLAYER);
+        scoreboard.recordWin(GameMode.PLAYER_VS_COMPUTER, PlayerId.FIRST);
 
-        assertEquals(1, scoreboard.getWins(Mark.X));
-        assertEquals(1, scoreboard.getWins(Mark.O));
-        assertEquals(1, scoreboard.getDraws());
-    }
-
-    @Test
-    void doesNotRecordAnUnfinishedGame() {
-        Scoreboard scoreboard = new Scoreboard();
-
-        assertThrows(IllegalArgumentException.class, () -> scoreboard.record(GameStatus.IN_PROGRESS));
+        assertEquals(1, scoreboard.getWins(GameMode.PLAYER_VS_PLAYER, PlayerId.FIRST));
+        assertEquals(1, scoreboard.getWins(GameMode.PLAYER_VS_PLAYER, PlayerId.SECOND));
+        assertEquals(1, scoreboard.getDraws(GameMode.PLAYER_VS_PLAYER));
+        assertEquals(1, scoreboard.getWins(GameMode.PLAYER_VS_COMPUTER, PlayerId.FIRST));
+        assertEquals(0, scoreboard.getWins(GameMode.PLAYER_VS_COMPUTER, PlayerId.SECOND));
+        assertEquals(0, scoreboard.getDraws(GameMode.PLAYER_VS_COMPUTER));
     }
 }
