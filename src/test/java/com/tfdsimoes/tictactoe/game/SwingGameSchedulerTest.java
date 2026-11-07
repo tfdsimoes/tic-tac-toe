@@ -37,10 +37,14 @@ class SwingGameSchedulerTest {
     @Test
     void cancellationPreventsScheduledTaskFromRunning() throws InterruptedException {
         AtomicInteger callCount = new AtomicInteger();
-        AtomicReference<GameScheduler.Cancellable> cancellable = new AtomicReference<>();
+        CountDownLatch observationFinished = new CountDownLatch(1);
 
-        onEventDispatchThread(() -> cancellable.set(scheduler.schedule(1_000, callCount::incrementAndGet)));
-        cancellable.get().cancel();
+        onEventDispatchThread(() -> {
+            GameScheduler.Cancellable cancellable = scheduler.schedule(1_000, callCount::incrementAndGet);
+            cancellable.cancel();
+            scheduler.schedule(1_100, observationFinished::countDown);
+        });
+        assertTrue(observationFinished.await(3, TimeUnit.SECONDS));
         flushEventQueue();
 
         assertEquals(0, callCount.get());
